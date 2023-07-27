@@ -260,18 +260,18 @@ char * getDateN(void) {
 }
 
 time_t nowN;
-char * getTimeN(void) //get pretty hh:mm:ss timestamp
+char * getTimeN(void) //get pretty hh-mm-ss timestamp
 {
+  char * curr = (char *) malloc(9);
   time_t t = time(NULL);
-
-  char * curr;
-  char * stamp = asctime(localtime( & t));
-
-  curr = strtok(stamp, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-  curr = strtok(NULL, " ");
-
+  struct tm * ptm = localtime(& t);
+  sprintf(
+    curr,
+    "%02d-%02d-%02d,",
+    ptm->tm_hour,
+    ptm->tm_min,
+    ptm->tm_sec
+  );
   return curr;
 }
 
