@@ -1063,6 +1063,7 @@ usage ()
   printf ("  -r <files>    Read/Play saved mbe data from file(s)\n");
   printf ("  -g <num>      Audio output gain (default = 0 = auto, disable = -1)\n");
   printf ("  -w <file>     Output synthesized speech to a .wav file, legacy auto modes only.\n");
+  printf ("  -j <file>     Scan the list of frequencies from the given text file.\n");
   printf ("  -P            Enable Per Call WAV file saving in XDMA and NXDN decoding classes\n");
   printf ("                 (Per Call can only be used in Ncurses Terminal!)\n");
   printf ("                 (Running in console will use static wav files)\n");
@@ -1250,9 +1251,22 @@ if (opts->audio_out_type == 0)
   openPulseOutput(opts);
 }
 
+// Scan for the specified list of frequencies.
+int scan_frequencies = 1;
+double snr_threshold = 17;
+double snr = 0.0;
+int frequency_index = 0;
+long int * frequencies;
+int frequencies_length = 0;
+
+if (opts->scan_frequencies == 1)
+{
+  frequencies_length = get_frequencies_length(opts->frequencies_list_file_path);
+  frequencies = get_frequencies(opts->frequencies_list_file_path, frequencies_length);
+}
+
 	while (1)
     {
-
       noCarrier (opts, state);
       if (state->menuopen == 0)
       {
@@ -1262,7 +1276,6 @@ if (opts->audio_out_type == 0)
         state->umid = (((state->max) - state->center) * 5 / 8) + state->center;
         state->lmid = (((state->min) - state->center) * 5 / 8) + state->center;
       }
-
 
 
       while (state->synctype != -1)
@@ -1291,7 +1304,35 @@ if (opts->audio_out_type == 0)
             state->umid = (((state->max) - state->center) * 5 / 8) + state->center;
             state->lmid = (((state->min) - state->center) * 5 / 8) + state->center;
           }
+
+
         }
+
+
+      if (opts->scan_frequencies == 1)
+      {
+        for (short int i = 0; i < 3; i++)
+        {
+          // Measure the SNR for the current frequency.
+          GetSignalToNoiseRatio(opts->rigctl_sockfd, &snr);
+          fprintf(stderr, "snr: %0.0lf\n", snr); // TODO Remove.
+          // When the average SNR for the current frequency is not enough, tune SDR++ to the next frequency.
+          if (snr < snr_threshold)
+          {
+            frequency_index += 1;
+            // When the last frequency has been measured, start again from the first frequency.
+            if (frequency_index == frequencies_length)
+            {
+              frequency_index = 0;
+            }
+            // Tune to the next frequency.
+            SetFreq(opts->rigctl_sockfd, frequencies[frequency_index]);
+            fprintf(stderr, ">>>>>>>>>                    SetFreq: %lu\n", frequencies[frequency_index]); // TODO Remove.
+          }
+          usleep(100000);
+          // std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+      }
     }
 }
 
@@ -1389,7 +1430,7 @@ main (int argc, char **argv)
 
   exitflag = 0;
 
-  while ((c = getopt (argc, argv, "haepPqs:t:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
+  while ((c = getopt (argc, argv, "haepPqs:t:j:v:z:i:o:d:c:g:nw:B:C:R:f:m:u:x:A:S:M:G:D:L:VU:YK:b:H:X:NQ:WrlZTF01:2:345:6:7:89:Ek:")) != -1)
     {
       opterr = 0;
       switch (c)
@@ -1397,7 +1438,16 @@ main (int argc, char **argv)
         case 'h':
           usage ();
           exit (0);
-          
+
+
+        case 'j':
+          strncpy(opts.frequencies_list_file_path, optarg, 1023);
+          opts.frequencies_list_file_path[1023] = '\0';
+          fprintf(stderr, "Reading a list of frequencies from the file %s\n", opts.frequencies_list_file_path);
+          opts.scan_frequencies = 1;
+          break;
+
+
         case 'a':
           opts.call_alert = 1;
           break;

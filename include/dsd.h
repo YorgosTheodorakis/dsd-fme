@@ -386,6 +386,8 @@ typedef struct
   //Use P25p1 heuristics
   uint8_t use_heuristics;
 
+  char frequencies_list_file_path[1024];
+  int scan_frequencies;
 } dsd_opts;
 
 typedef struct
@@ -889,6 +891,8 @@ short dpmr_filter(short sample);
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr);
 uint64_t ConvertBitIntoBytes(uint8_t * BufferIn, uint32_t BitLength);
 void print_debug(dsd_state * state, dsd_opts * opts);
+int get_frequencies_length(char * frequencies_list_file_path);
+long int * get_frequencies(char * frequencies_list_file_path, int frequencies_length);
 
 void ncursesOpen (dsd_opts * opts, dsd_state * state);
 void ncursesPrinter (dsd_opts * opts, dsd_state * state);
@@ -1092,6 +1096,7 @@ long int GetCurrentFreq(int sockfd);
 bool SetFreq(int sockfd, long int freq);
 bool SetModulation(int sockfd, int bandwidth);
 //commands below unique to GQRX only, not usable on SDR++
+bool GetSignalToNoiseRatio(int sockfd, double *dBFS);
 bool GetSignalLevel(int sockfd, double *dBFS);
 bool GetSquelchLevel(int sockfd, double *dBFS);
 bool SetSquelchLevel(int sockfd, double dBFS);
