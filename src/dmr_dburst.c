@@ -633,6 +633,9 @@ void dmr_data_burst_handler(dsd_opts * opts, dsd_state * state, uint8_t info[196
   if (opts->payload == 1 && databurst != 0x09)
   {
     fprintf (stderr, "\n");
+
+    print_debug(state, opts);
+
     fprintf (stderr, "%s", KCYN);
     fprintf (stderr, " DMR PDU Payload ");
     for (i = 0; i < pdu_len; i++)

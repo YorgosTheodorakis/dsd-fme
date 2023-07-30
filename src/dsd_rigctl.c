@@ -169,6 +169,30 @@ bool GetSignalLevel(int sockfd, double *dBFS)
     return true;
 }
 
+
+bool GetSignalToNoiseRatio(int sockfd, double *dBFS)
+{
+  char buf[BUFSIZE];
+
+  Send(sockfd, "s\n");
+  Recv(sockfd, buf);
+  // fprintf(stderr, "\nGetSignalToNoiseRation: %s\n", buf); // TODO Remove.
+  if (strcmp(buf, "RPRT 1") == 0)
+  {
+    return -1;
+  }
+
+  sscanf(buf, "%lf", dBFS);
+  *dBFS = round((*dBFS) * 10) / 10;
+
+  if (*dBFS == 0.0)
+  {
+    return false;
+  }
+  return true;
+}
+
+
 bool GetSquelchLevel(int sockfd, double *dBFS)
 {
     char buf[BUFSIZE];

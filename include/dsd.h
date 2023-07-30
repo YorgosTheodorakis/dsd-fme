@@ -888,6 +888,7 @@ short dpmr_filter(short sample);
 
 int strncmperr(const char *s1, const char *s2, size_t size, int MaxErr);
 uint64_t ConvertBitIntoBytes(uint8_t * BufferIn, uint32_t BitLength);
+void print_debug(dsd_state * state, dsd_opts * opts);
 
 void ncursesOpen (dsd_opts * opts, dsd_state * state);
 void ncursesPrinter (dsd_opts * opts, dsd_state * state);

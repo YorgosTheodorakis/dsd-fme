@@ -438,3 +438,246 @@ uint32_t ComputeCrc32Bit(uint8_t * DMRData, uint32_t NbData)
   /* Return the CRC */
   return CRC;
 } /* End ComputeCrc32Bit() */
+
+
+char const * get_algorithm(uint8_t algorithm_id)
+{
+  fprintf(stderr, "\nget_algorithm %u\n\n", algorithm_id); // TODO Remove.
+  switch (algorithm_id)
+  {
+    case 0xAA: return "ADP-RC4";
+    case 0x21: return "ADP-RC4";
+    case 0x81: return "DES-OFB";
+    case 0x22: return "DES-OFB";
+    case 0x83: return "Triple DES";
+    case 0x23: return "Triple DES";
+    case 0x85: return "AES-128";
+    case 0x24: return "AES-128";
+    case 0x84: return "AES-256";
+    case 0x25: return "AES-256";
+    case 0x02: return "Hytera Full Encrypt";
+    default:   return "UNKNOWN";
+  }
+}
+
+
+char const * get_manufacturer(uint8_t manufacturer_id)
+{
+  switch (manufacturer_id)
+  {
+    case 0x10: return "Motorola";
+    case 0x68: return "Hytera";
+    case 0x58: return "Tait";
+    default:   return "UNKNOWN";
+  }
+}
+
+
+void printDateTime(void)
+{
+  time_t t = time(NULL);
+  struct tm * ptm = localtime(& t);
+  fprintf(
+    stderr,
+    "Time: %04d/%02d/%02d-%02d:%02d:%02d; ",
+    1900 + ptm->tm_year,
+    ptm->tm_mon,
+    ptm->tm_mday,
+    ptm->tm_hour,
+    ptm->tm_min,
+    ptm->tm_sec
+  );
+}
+
+
+void printOnlyDate(void)
+{
+  time_t t = time(NULL);
+  struct tm * ptm = localtime(& t);
+  fprintf(
+    stderr,
+    "%04d/%02d/%02d,",
+    1900 + ptm->tm_year,
+    ptm->tm_mon,
+    ptm->tm_mday
+  );
+}
+
+
+void printOnlyTime(void)
+{
+  time_t t = time(NULL);
+  struct tm * ptm = localtime(& t);
+  fprintf(
+    stderr,
+    "%02d:%02d:%02d,",
+    ptm->tm_hour,
+    ptm->tm_min,
+    ptm->tm_sec
+  );
+}
+
+
+int get_frequencies_length(char * frequencies_list_file_path)
+{
+  // Count the number of frequencies in the file.
+  int frequencies_length = 0;
+  FILE * file;
+  file = fopen(frequencies_list_file_path, "r");
+  if (file == NULL)
+  {
+    printf("Error reading file\n");
+    exit (0);
+  }
+  for (char character = getc(file); character != EOF; character = getc(file))
+  {
+    if (character == '\n')
+    {
+      frequencies_length += 1;
+    }
+  }
+  fclose(file);
+  return frequencies_length;
+}
+
+
+long int * get_frequencies(char * frequencies_list_file_path, int frequencies_length)
+{
+  // Read the list of frequencies from the file.
+  long int * frequencies = malloc(frequencies_length * sizeof(long int));
+  FILE * file;
+  if (file == NULL)
+  {
+    fprintf(stderr, "Error reading file\n");
+    exit (0);
+  }
+  file = fopen(frequencies_list_file_path, "r");
+  for (int i = 0; i < frequencies_length; i++)
+  {
+    fscanf(file, "%ld,", &frequencies[i]);
+  }
+  fclose(file);
+  return frequencies;
+}
+
+
+void print_debug(dsd_state * state, dsd_opts * opts)
+{
+  int source;
+  if (state->currentslot == 0)
+  {
+    source = state->lastsrc;
+  }
+  else
+  {
+    source = state->lastsrcR;
+  }
+
+  int target;
+  if (state->currentslot == 0)
+  {
+    target = state->lasttg;
+  }
+  else
+  {
+    target = state->lasttgR;
+  }
+
+  char const * encrypted;
+  if (state->currentslot == 0)
+  {
+    if (state->dmr_so & 0x40)
+    {
+      encrypted = "yes";
+    }
+    else
+    {
+      encrypted = "no";
+    }
+  }
+  else if (state->currentslot == 1)
+  {
+    if (state->dmr_soR & 0x40)
+    {
+      encrypted = "yes";
+    }
+    else
+    {
+      encrypted = "no";
+    }
+  }
+  else
+  {
+    encrypted = "UNKNOWN";
+  }
+
+  long int frequency = GetCurrentFreq(opts->rigctl_sockfd);
+
+  char const * algorithm;
+  if (state->payload_algid > 0)
+  {
+    algorithm = get_algorithm(state->payload_algid);
+  }
+  else if (state->payload_algidR > 0)
+  {
+    algorithm = get_algorithm(state->payload_algidR);
+  }
+  else
+  {
+    algorithm = "";
+  }
+
+  int key;
+  if ( state->payload_keyid > 0)
+  {
+    key = state->payload_keyid;
+  }
+  else if (state->payload_keyidR > 0)
+  {
+    key = state->payload_keyidR;
+  }
+  else
+  {
+    key = 0;
+  }
+
+  double signal_level;
+  double snr;
+  GetSignalLevel(opts->rigctl_sockfd, &signal_level);
+  GetSignalToNoiseRatio(opts->rigctl_sockfd, &snr);
+  // bool result_signal_level = GetSquelchLevel(opts->rigctl_sockfd, &signal_level);
+
+  // DEBUG
+  fprintf(stderr, "DEBUG ");
+  printDateTime();
+  fprintf(stderr, "Freq: %lu; ", frequency);
+  fprintf(stderr, "Source: %u; ", source);
+  fprintf(stderr, "Target: %u; ", target);
+  fprintf(stderr, "Call type: %s; ", state->call_string[state->currentslot]);
+  fprintf(stderr, "Slot: %u; ", state->currentslot);
+  fprintf(stderr, "Color Code: %d; ", state->dmr_color_code);
+  fprintf(stderr, "Encrypted: %s; ", encrypted);
+  fprintf(stderr, "Algorithm: %s; ", algorithm);
+  fprintf(stderr, "Key: %i; ", key);
+  fprintf(stderr, "Signal level: %0.0lf; ", signal_level); // TODO Remove.
+  fprintf(stderr, "Signal to noise ratio: %0.0lf; ", snr); // TODO Remove.
+  fprintf(stderr, "Manufacturer: %s; ", get_manufacturer(state->dmr_mfid));
+  fprintf(stderr, "\n");
+
+  fprintf(stderr, "CSV ");
+  printOnlyDate();
+  printOnlyTime();
+  fprintf(stderr, "%lu,", frequency);
+  fprintf(stderr, "%u,", source);
+  fprintf(stderr, "%u,", target);
+  fprintf(stderr, "%s,", state->call_string[state->currentslot]);
+  fprintf(stderr, "%u,", state->currentslot);
+  fprintf(stderr, "%02d,", state->dmr_color_code);
+  fprintf(stderr, "%s,", encrypted);
+  fprintf(stderr, "%s,", algorithm);
+  fprintf(stderr, "%i,", key);
+  fprintf(stderr, "%0.0lf,", signal_level);
+  fprintf(stderr, "%0.0lf,", snr);
+  fprintf(stderr, "%s", get_manufacturer(state->dmr_mfid));
+  fprintf(stderr, "\n");
+}
