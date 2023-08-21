@@ -1315,7 +1315,7 @@ if (opts->scan_frequencies == 1)
         {
           // Measure the SNR for the current frequency.
           GetSignalToNoiseRatio(opts->rigctl_sockfd, &snr);
-          fprintf(stderr, "snr: %0.0lf\n", snr); // TODO Remove.
+          // fprintf(stderr, "snr: %0.0lf\n", snr); // TODO Remove.
           // When the average SNR for the current frequency is not enough, tune SDR++ to the next frequency.
           if (snr < snr_threshold)
           {
@@ -1327,7 +1327,7 @@ if (opts->scan_frequencies == 1)
             }
             // Tune to the next frequency.
             SetFreq(opts->rigctl_sockfd, frequencies[frequency_index]);
-            fprintf(stderr, ">>>>>>>>>                    SetFreq: %lu\n", frequencies[frequency_index]); // TODO Remove.
+            // fprintf(stderr, ">>>>>>>>>                    SetFreq: %lu\n", frequencies[frequency_index]); // TODO Remove.
           }
           usleep(100000);
           // std::this_thread::sleep_for(std::chrono::milliseconds(100));
