@@ -546,12 +546,12 @@ long int * get_frequencies(char * frequencies_list_file_path, int frequencies_le
   // Read the list of frequencies from the file.
   long int * frequencies = malloc(frequencies_length * sizeof(long int));
   FILE * file;
+  file = fopen(frequencies_list_file_path, "r");
   if (file == NULL)
   {
     fprintf(stderr, "Error reading file\n");
     exit (0);
   }
-  file = fopen(frequencies_list_file_path, "r");
   for (int i = 0; i < frequencies_length; i++)
   {
     fscanf(file, "%ld,", &frequencies[i]);
